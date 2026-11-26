@@ -82,7 +82,7 @@ pipeline {
 
                             sed -i '/name: fast-api-chatbot/{n;s|image:.*|image: ${DOCKER_IMAGE}:${env.BUILD_NUMBER}|}' k8s/Deployment.yaml
 
-                            git config user.name "adhilzaed"
+                            git config user.name "adhil6407"
                             git config user.email "adhilzaed@gmail.com"
 
                             git add k8s/Deployment.yaml
