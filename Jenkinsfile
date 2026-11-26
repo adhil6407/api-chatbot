@@ -4,8 +4,10 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'docker-cred'
         DOCKER_IMAGE          = 'adhil6407/fast-api-chatbot'
+
         SONAR_SERVER_NAME     = 'sonarqube_env'
         SONAR_SCANNER_TOOL    = 'sonar-scanner'
+
         GIT_CREDENTIALS_ID    = 'github-cred'
         MANIFEST_REPO         = 'https://github.com/adhil6407/api-chatbot.git'
         MANIFEST_BRANCH       = 'main'
@@ -65,36 +67,30 @@ pipeline {
         stage('Update Manifest Repo') {
             steps {
                 script {
-                    dir('manifest-workspace') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: "${GIT_CREDENTIALS_ID}",
+                            usernameVariable: 'GH_USER',
+                            passwordVariable: 'GH_TOKEN'
+                        )
+                    ]) {
 
                         sh """
-                            git clone ${MANIFEST_REPO} .
+                            git remote set-url origin https://\$GH_USER:\$GH_TOKEN@github.com/adhil6407/api-chatbot.git
+
+                            git pull --rebase origin ${MANIFEST_BRANCH}
+
+                            sed -i '/name: fast-api-chatbot/{n;s|image:.*|image: ${DOCKER_IMAGE}:${env.BUILD_NUMBER}|}' k8s/Deployment.yaml
+
+                            git config user.name "adhilzaed"
+                            git config user.email "adhilzaed@gmail.com"
+
+                            git add k8s/Deployment.yaml
+
+                            git commit -m "chore(manifest): update fast-api-chatbot image tag to ${env.BUILD_NUMBER} [skip ci]" || true
+
+                            git push origin ${MANIFEST_BRANCH}
                         """
-
-                        withCredentials([
-                            usernamePassword(
-                                credentialsId: "${GIT_CREDENTIALS_ID}",
-                                usernameVariable: 'GH_USER',
-                                passwordVariable: 'GH_TOKEN'
-                            )
-                        ]) {
-                            sh """
-                                git remote set-url origin https://\$GH_USER:\$GH_TOKEN@github.com/adhil6407/api-chatbot.git
-
-                                git pull --rebase origin ${MANIFEST_BRANCH}
-
-                                sed -i '/name: fast-api-chatbot/{n;s|image:.*|image: ${DOCKER_IMAGE}:${env.BUILD_NUMBER}|}' k8s/Deployment.yaml
-
-                                git config user.name "adhilzaed"
-                                git config user.email "adhilzaed@gmail.com"
-
-                                git add k8s/Deployment.yaml
-
-                                git commit -m "chore(manifest): update fast-api-chatbot image tag to ${env.BUILD_NUMBER} [skip ci]" || true
-
-                                git push origin ${MANIFEST_BRANCH}
-                            """
-                        }
                     }
                 }
             }
